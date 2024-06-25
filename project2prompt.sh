@@ -95,21 +95,23 @@ process_file() {
 
     echo "\`\`\`$extension" >> "$full_output_path"
     if $scrub_comments; then
-        # Remove comments based on file extension
-        case "$extension" in
-            py|sh|bash)
-                sed 's/^#.*$//g' "$file" | sed '/^\s*$/d' >> "$full_output_path"
-                ;;
-            js|java|c|cpp|h|hpp)
-                sed 's/\/\/.*$//g' "$file" | sed '/^\s*$/d' | sed '/\/\*.*\*\//d' | sed '/\/\*/,/\*\//d' >> "$full_output_path"
-                ;;
-            html|xml)
-                sed 's/<!--.*-->//g' "$file" | sed '/^\s*$/d' >> "$full_output_path"
-                ;;
-            *)
-                cat "$file" >> "$full_output_path"
-                ;;
-        esac
+        # Generic comment removal
+        sed '
+            # Remove single-line comments starting with #, //, --, ;, or %
+            s/^\s*\(#\|\/\/\|--\|;\|%\).*$//g
+            
+            # Remove multi-line comments for C-style languages
+            /\/\*/,/\*\//d
+            
+            # Remove multi-line comments for HTML/XML
+            /<!--/,/-->/d
+            
+            # Remove multi-line comments for Lua
+            /--\[\[/,/\]\]/d
+            
+            # Remove blank lines
+            /^\s*$/d
+        ' "$file" >> "$full_output_path"
     else
         cat "$file" >> "$full_output_path"
     fi
